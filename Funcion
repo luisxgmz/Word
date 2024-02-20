@@ -1,0 +1,68 @@
+    Protected Sub btnCrear_Click(sender As Object, e As EventArgs) Handles btnCrear.Click
+        Dim FHActual As String = Class1.FechaNow(Now())
+
+        
+
+        Dim templatePath As String = "C:\Users\Luis Gomez\OneDrive - Feroly Agencia Aduanal SC\Documentos\OrdenCompra1.docx"
+        Dim filePath As String = "C:\Users\Luis Gomez\OneDrive - Feroly Agencia Aduanal SC\Documentos\OrdenC-" + txtFolio.Text + " -2024.docx"
+
+        ' Copiar la plantilla a un nuevo archivo
+        File.Copy(templatePath, filePath, True)
+
+        ' Abrir el documento
+        Using wordDoc As WordprocessingDocument = WordprocessingDocument.Open(filePath, True)
+            ' Reemplazar marcadores en el documento
+            ReplaceBookmarkText(wordDoc, "Fecha1", FHActual.ToString)
+            ReplaceBookmarkText(wordDoc, "Folio", txtFolio.Text + "-2024")
+            ReplaceBookmarkText(wordDoc, "Proveedor", lstProveedor.Text)
+            ReplaceBookmarkText(wordDoc, "EnviarA", lstenviar.Text)
+            ReplaceBookmarkText(wordDoc, "Direccion", txtDireccion.Text)
+            ReplaceBookmarkText(wordDoc, "Telefono", txtTelefono.Text)
+            ReplaceBookmarkText(wordDoc, "FacturarA", txtFacturar.Text)
+            ReplaceBookmarkText(wordDoc, "Correos", txtEnviar.Text)
+            ReplaceBookmarkText(wordDoc, "Subtotal", txtSubtotal.Text)
+            ReplaceBookmarkText(wordDoc, "IVA", txtIVA.Text)
+            ReplaceBookmarkText(wordDoc, "Retencion", txtRetencion.Text)
+            ReplaceBookmarkText(wordDoc, "Total", txtTotalFinal.Text)
+            ReplaceBookmarkText(wordDoc, "Moneda", txtMoneda.Text)
+
+
+
+
+        End Using
+
+
+        lblerror.Text = "Documento creado con éxito en: " & filePath
+    End Sub
+
+    Private Sub ReplaceBookmarkText(wordDoc As WordprocessingDocument, bookmarkName As String, replacementText As String)
+        Dim bookmarkStarts = wordDoc.MainDocumentPart.Document.Descendants(Of BookmarkStart)()
+        For Each bookmarkStart As BookmarkStart In bookmarkStarts
+            If bookmarkStart.Name = bookmarkName Then
+                Dim bookmarkEnd As BookmarkEnd = Nothing
+                For Each descendant As OpenXmlElement In bookmarkStart.Parent.Elements()
+                    If TypeOf descendant Is BookmarkEnd Then
+                        Dim endElement As BookmarkEnd = DirectCast(descendant, BookmarkEnd)
+                        If endElement.Id.Value = bookmarkStart.Id.Value Then
+                            bookmarkEnd = endElement
+                            Exit For
+                        End If
+                    End If
+                Next
+                If bookmarkEnd IsNot Nothing Then
+                    Dim bookmarkRange As New List(Of OpenXmlElement)()
+                    Dim element As OpenXmlElement = bookmarkStart.NextSibling()
+                    While element IsNot Nothing AndAlso element IsNot bookmarkEnd
+                        bookmarkRange.Add(element)
+                        element = element.NextSibling()
+                    End While
+
+                    For Each elementToRemove As OpenXmlElement In bookmarkRange
+                        elementToRemove.Remove()
+                    Next
+
+                    bookmarkStart.Parent.InsertBefore(New Run(New Text(replacementText)), bookmarkEnd)
+                End If
+            End If
+        Next
+    End Sub
